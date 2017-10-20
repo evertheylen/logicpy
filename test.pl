@@ -1,8 +1,4 @@
 
-%foo.
-%bar.
-
-order(foo, bar).
-
-a(X, Y) :- X, Y, foo, bar.
-
+foo(X, Y) :- bar(X), quuz(bla(Y)).
+bar(A) :- quuz(bla(A)).
+quuz(bla(B)) :- B = kaas; B = hesp.
