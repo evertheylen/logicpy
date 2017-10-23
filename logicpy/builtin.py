@@ -1,5 +1,6 @@
 
 from logicpy.structure import Structure, MultiArg
+from logicpy.data import Variable, BasicTerm
 
 
 class TrueCls(Structure):
@@ -69,15 +70,22 @@ class unify(Structure):
     def prove(self, bindings):
         E = set(bindings.items())
         E.add((self.left, self.right))
-        #try:
-        new_E = self.martelli_montanari(E)
-        #except Exception as e:
-        #    print(f"MM failed: {e}, {type(e)}")
-        #    return  # failure --> don't yield
+        try:
+            new_E = self.martelli_montanari(E)
+        except Exception as e:
+            print(f"MM failed: {e}")
+            return  # failure --> don't yield
         yield dict(new_E)
     
     @staticmethod
+    def simple_unify(bindings):
+        E = set(bindings.items())
+        return dict(unify.martelli_montanari(E))
+    
+    @staticmethod
     def martelli_montanari(E):
+        from logicpy.core import Underscore
+        
         if len(E) == 0:
             return E
         
@@ -102,7 +110,7 @@ class unify(Structure):
                 if A.name == B.name and len(A.children) == len(B.children):
                     E.update(zip(A.children, B.children))
                 else:
-                    raise Exception("Conflict")
+                    raise Exception(f"Conflict {A}, {B}")
             elif isinstance(A, Variable) and A != B:
                 # substitute
                 if B.has_occurence(A):

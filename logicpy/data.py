@@ -1,7 +1,8 @@
 
 
 class Term:
-    pass
+    def set_scope(self, scope):
+        pass
 
 
 class NamedTerm(Term):
@@ -73,12 +74,19 @@ class Compound(BasicTerm):
     def replace(self, A, B):
         new_children = tuple((B if c == A else c.replace(A, B)) for c in self.children)
         return Compound(self.name, new_children)
+    
+    def set_scope(self, scope):
+        for c in self.children:
+            c.set_scope(scope)
 
 
 class Variable(NamedTerm):
     def __init__(self, name, scope=None):
         self.name = name
         self.scope = scope
+    
+    def __repr__(self):
+        return f"Variable({self.name!r}, {self.scope})"
     
     def __eq__(self, other):
         # Variables are scoped!
@@ -92,6 +100,9 @@ class Variable(NamedTerm):
     
     def occurences(self, O):
         O.add(self)
+    
+    def set_scope(self, scope):
+        self.scope = scope
 
 
 class Argument(Variable):

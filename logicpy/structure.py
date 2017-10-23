@@ -1,5 +1,4 @@
 
-
 class Structure:
     # builtin operators, see below
     
@@ -11,12 +10,15 @@ class Structure:
         pass
     
     def __and__(self, other):
+        from logicpy.builtin import and_
         return and_(self, other)
     
     def __or__(self, other):
+        from logicpy.builtin import or_
         return or_(self, other)
     
     def __eq__(self, other):
+        from logicpy.builtin import unify
         return unify(self, other)
 
 

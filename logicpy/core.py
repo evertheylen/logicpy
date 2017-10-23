@@ -1,6 +1,7 @@
 
 from logicpy.predicate import Predicate, NoArgument
-from logicpy.data import Variable, Atom
+from logicpy.data import Variable, Atom, NamedTerm
+from logicpy.builtin import Fail, unify
 
 
 class Universe:
@@ -27,11 +28,11 @@ class Universe:
             return Fail
     
     def query(self, struc):
-        res = list(struc.prove({}))
+        res = [unify.simple_unify(s) for s in struc.prove({})]
         vars = set()
         struc.occurences(vars)
         return [{k: v for k, v in binding.items() if any(k.has_occurence(V) or v.has_occurence(V) for V in vars)}
-                for bindings in res] 
+                for binding in res]
     
     def ok(self, struc):
         for b in struc.prove({}):
@@ -66,7 +67,4 @@ class Underscore(NamedTerm):
             return Variable(name)
         else:
             return Atom(name)  # Atom will create Compounds when needed
-    
-
-_ = Underscore()
 

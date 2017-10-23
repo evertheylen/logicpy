@@ -1,5 +1,9 @@
 
+from collections import namedtuple
+
 from logicpy.structure import Structure, MultiArg
+from logicpy.builtin import True_, and_, unify
+from logicpy.data import Argument
 
 
 class Signature(namedtuple('_Signature', ('name', 'arity'))):
@@ -14,6 +18,7 @@ class Clause:
         self.univ = univ
         self.signature = Signature(name, len(args))
         self.args = args
+        for a in args: a.set_scope(self)
         self.body = True_ if body is True else body
         if self.body:
             self.body.set_scope(self)

@@ -1,6 +1,4 @@
 
-from collections import defaultdict, OrderedDict, namedtuple
-
 # Prolog:
 #   parent(alice, bob).
 #   parent(alice, charlie).
@@ -20,36 +18,8 @@ from collections import defaultdict, OrderedDict, namedtuple
 #   u.parent[_.alice, _.charlie] = True
 #   u.sibling[X, Y] = u.parent(P, X) & u.parent(_.P, _.Y)
 
-
-# Basic abstractions
-# ==================
-
-# Meaning
-# -------
-
-# Builtin structures
-# ------------------
-
-
-
-
-# Terms, variables, basically data
-# --------------------------------
-
-
-# The Underscore
-# --------------
-
-class Underscore(NamedTerm):
-    def __init__(self):
-        super().__init__('_')
-    
-    def __getattr__(self, name):
-        if name[0].isupper() or name[0] == '_':  # Variable
-            return Variable(name)
-        else:
-            return Atom(name)  # Atom will create Compounds when needed
-    
+from .core import Universe, Underscore
 
 _ = Underscore()
 
+__all__ = ('Universe', '_')
