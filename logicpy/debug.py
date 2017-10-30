@@ -25,13 +25,13 @@ class Debugger:
         self.level = level
     
     def prove(self, what, res):
-        self.output(f"==> proving {type(what).__name__} ({truncate(str(what), 40)}) with {res}", -1)
+        self.output(f"-> {type(what).__name__} ({truncate(str(what), 25)}) with {res}", -1)
         
     def proven(self, what, res):
-        self.output(f"<== proven {type(what).__name__} ({truncate(str(what), 40)}) with {res}", -1)
+        self.output(f"<- {type(what).__name__} ({truncate(str(what), 25)}) with {res}", -1)
     
     def output(self, text, relative_level=0):
-        print(((self.level + relative_level) * "    ") + text)
+        print(((self.level + relative_level) * "   ") + text)
         
     def next(self):
         return type(self)(self.level + 1)

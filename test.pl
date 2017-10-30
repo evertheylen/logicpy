@@ -1,4 +1,7 @@
 
+test(foo(X), Y) :- test(X, Y).
+test(bar, bar).
+
 sum(zero, X, X).
 sum(next(X), Y, Z) :- sum(X, next(Y), Z).
 

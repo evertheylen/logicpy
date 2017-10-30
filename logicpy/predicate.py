@@ -103,6 +103,6 @@ class PredicateCall(MultiArg):
         # will improve performance of unification (a lot?)
         dbg.prove(self, result)
         body = self.univ.get_pred_body(self.signature)
-        new_result = result | Result((Argument(i, self.signature), a) for i, a in enumerate(self.args))
+        new_result = result | Result((Argument(i, id(result)), a) for i, a in enumerate(self.args))
         return body.prove(new_result, dbg.next())
     

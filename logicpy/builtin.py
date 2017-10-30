@@ -68,7 +68,7 @@ class DoMgu(SimpleOperation):
         dbg.prove(self, result)
         mgu = result.mgu(dbg)
         if mgu:
-            dbg.proven(self, result)
+            dbg.proven(self, mgu)
             yield mgu
 
 DoMgu = DoMgu()
@@ -88,9 +88,9 @@ class unify(MultiArg):
         return (self.left, self.right)
 
     def prove(self, result, dbg):
-        dbg.prove(self, result)
         result = result | {(self.left, self.right)}
         if self.do_mgu:
+            dbg.prove(self, result)
             yield from DoMgu.prove(result, dbg.next())
         else:
             yield result
