@@ -2,6 +2,10 @@
 from logicpy.predicate import Predicate, NoArgument
 from logicpy.data import Variable, Atom, NamedTerm
 from logicpy.builtin import Fail, unify
+from logicpy.result import Result
+from logicpy.structure import Structure
+from logicpy.debug import Debugger, NoDebugger
+from logicpy.util.getch import getch
 
 
 class Universe:
@@ -27,12 +31,48 @@ class Universe:
         else:
             return Fail
     
-    def query(self, struc):
-        res = [unify.simple_unify(s) for s in struc.prove({})]
-        vars = set()
-        struc.occurences(vars)
-        return [{k: v for k, v in binding.items() if any(k.has_occurence(V) or v.has_occurence(V) for V in vars)}
-                for binding in res]
+    def query(self, struc, *, debug=False):
+        for res in struc.prove(Result(), Debugger() if debug else NoDebugger()):
+            res = res.mgu()
+            if res is not None:
+                yield res
+    
+    def simple_query(self, struc, **kwargs):
+        return [res.easy_dict() for res in self.query(struc, **kwargs)]
+    
+    def interactive(self):
+        namespace = self.namespace()
+        underscore = Underscore()
+        
+        class InteractiveLocals:
+            def __getitem__(glob, name):
+                if name in namespace:
+                    return getattr(namespace, name)
+                else:
+                    return getattr(underscore, name)
+        
+        shell_locals = InteractiveLocals()
+        
+        while True:
+            try:
+                inp = input("? ")
+                struc = eval(inp, {}, shell_locals)
+                if hasattr(struc, 'prove'):
+                    for res in struc.prove(Result()):
+                        print(res)
+                        char = getch()
+                        if char in '\n.':
+                            break
+                        elif char == ';':
+                            continue
+                        else:
+                            print(f"Unknown action '{char}'")
+                else:
+                    print(f"Not a provable structure: {struc}")
+            except EOFError:
+                break
+            except Exception as e:
+                print("Error: {e}")
     
     def ok(self, struc):
         for b in struc.prove({}):
@@ -47,6 +87,10 @@ class Universe:
 class Namespace:
     def __init__(self, univ):
         self.__dict__['_univ'] = univ
+        self.__dict__['_names'] = {sig.name for sig, pred in univ._predicates.items()}
+    
+    def __contains__(self, name):
+        return name in self._names
     
     def __getattr__(self, name):
         # getattr will cover the case of 'u.foo'

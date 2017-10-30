@@ -36,4 +36,8 @@ class MultiArg(Structure):
     def occurences(self, O):
         for a in self.args:
             a.occurences(O)
+    
+    def has_occurence(self, var):
+        return any(a.has_occurence(var) for a in self.args)
 
+    

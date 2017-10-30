@@ -86,7 +86,7 @@ class Variable(NamedTerm):
         self.scope = scope
     
     def __repr__(self):
-        return f"Variable({self.name!r}, {self.scope})"
+        return f"Variable({self.name!r}, {id(self.scope)})"
     
     def __eq__(self, other):
         # Variables are scoped!

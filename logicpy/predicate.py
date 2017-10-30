@@ -2,8 +2,9 @@
 from collections import namedtuple
 
 from logicpy.structure import Structure, MultiArg
-from logicpy.builtin import True_, and_, unify
+from logicpy.builtin import True_, and_, unify, DoMgu
 from logicpy.data import Argument
+from logicpy.result import Result
 
 
 class Signature(namedtuple('_Signature', ('name', 'arity'))):
@@ -26,7 +27,8 @@ class Clause:
                 self.univ.define(self)
     
     def to_structure(self):
-        return and_(*[unify(Argument(i, self.signature), arg) for i, arg in enumerate(self.args)], self.body)
+        return and_(*[unify(Argument(i, self.signature), arg, do_mgu=False) for i, arg in enumerate(self.args)],
+                    DoMgu, self.body)
     
     def __str__(self):
         return str(self.signature)
@@ -67,10 +69,11 @@ class NoArgument(Clause, Structure):
         self.del_if_new()
         return PredicateCall(self.univ, Signature(self.signature.name, len(args)), args)
         
-    def prove(self, bindings):
+    def prove(self, result, dbg):
         # Usecase 5: act like a PredicateCall (/0 structure)
         # Luckily, we don't need weird inheritance tricks, since it's really pretty damn easy
-        return self.univ.get_pred_body(self.signature).prove({})
+        dbg.prove(self, result)
+        return self.univ.get_pred_body(self.signature).prove(Result(), dbg.next())
 
 
 class Predicate:
@@ -95,10 +98,11 @@ class PredicateCall(MultiArg):
     def __str__(self):
         return f"{self.signature.name}({', '.join(map(str, self.args))})"
     
-    def prove(self, bindings):
-        # TODO: limiting the bindings to only the pieces that are needed
+    def prove(self, result, dbg):
+        # TODO: limiting the result to only the pieces that are needed
         # will improve performance of unification (a lot?)
+        dbg.prove(self, result)
         body = self.univ.get_pred_body(self.signature)
-        new_bindings = {**bindings, **{Argument(i, self.signature): a for i, a in enumerate(self.args)}}
-        return body.prove(new_bindings)
+        new_result = result | Result((Argument(i, self.signature), a) for i, a in enumerate(self.args))
+        return body.prove(new_result, dbg.next())
     
