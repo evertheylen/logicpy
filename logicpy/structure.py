@@ -1,10 +1,9 @@
 
+import random
+
+
 class Structure:
     # builtin operators, see below
-    
-    def set_scope(self, scope):
-        # By default, don't do anything
-        pass
     
     def occurences(self, O):
         pass
@@ -20,6 +19,13 @@ class Structure:
     def __eq__(self, other):
         from logicpy.builtin import unify
         return unify(self, other)
+    
+    def with_scope(self, scope):
+        return self
+    
+    @staticmethod
+    def scope_id():
+        return random.getrandbits(64)
 
 
 class MultiArg(Structure):
@@ -28,10 +34,13 @@ class MultiArg(Structure):
     
     def __str__(self):
         return '(' + f" {self.op} ".join(map(str, self.args)) + ')'
-    
-    def set_scope(self, scope):
-        for a in self.args:
-            a.set_scope(scope)
+        
+    def __repr__(self):
+        return type(self).__name__ + '(' + ', '.join(map(repr, self.args)) + ')'
+        
+    def with_scope(self, scope):
+        args = [a.with_scope(scope) for a in self.args]
+        return type(self)(*args)
     
     def occurences(self, O):
         for a in self.args:
@@ -40,4 +49,8 @@ class MultiArg(Structure):
     def has_occurence(self, var):
         return any(a.has_occurence(var) for a in self.args)
 
-    
+
+class BinaryArg(MultiArg):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right

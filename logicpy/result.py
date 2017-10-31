@@ -1,5 +1,5 @@
 
-from logicpy.data import Variable, BasicTerm
+from logicpy.data import Term, Variable, BasicTerm
 from logicpy.debug import NoDebugger
 
 class MartelliMontanariFail(Exception):
@@ -7,6 +7,10 @@ class MartelliMontanariFail(Exception):
 
 
 class Result(frozenset):
+    
+    #def __init__(self, *args, **kwargs):
+        #self.cache = {}
+        #super().__init__(*args, **kwargs)
     
     # Act like a proper set ...............................
     
@@ -45,6 +49,7 @@ class Result(frozenset):
     @staticmethod
     def martelli_montanari(E):
         from logicpy.core import Underscore
+        from logicpy.structure import Structure
         
         if len(E) == 0:
             return E
@@ -83,6 +88,9 @@ class Result(frozenset):
                 else:
                     E = replaced_E
                 E.add((A, B))  # Add it back
+            elif not isinstance(A, (Structure, Term)) or isinstance(B, (Structure, Term)):
+                if A != B:
+                    raise MartelliMontanariFail(f"Constant Conflict {A}, {B}")
             else:
                 did_a_thing = False
             

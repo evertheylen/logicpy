@@ -20,25 +20,33 @@ class Universe:
     
     def define(self, clause):
         sig = clause.signature
-        if sig not in self._predicates:
-            self._predicates[sig] = Predicate(sig, clause.to_structure())
-        else:
-            self._predicates[sig] = Predicate(sig, self._predicates[sig].structure | clause.to_structure())
+        pred = self._predicates.setdefault(sig, Predicate(sig))
+        pred.add_clause(clause)
     
-    def get_pred_body(self, sig):
+    def get_pred(self, sig):
         if sig in self._predicates:
-            return self._predicates[sig].structure
+            return self._predicates[sig]
         else:
-            return Fail
+            return None
     
     def query(self, struc, *, debug=False):
+        struc = struc.with_scope(-1)
         for res in struc.prove(Result(), Debugger() if debug else NoDebugger()):
             res = res.mgu()
             if res is not None:
                 yield res
     
-    def simple_query(self, struc, **kwargs):
-        return [res.easy_dict() for res in self.query(struc, **kwargs)]
+    def simple_query(self, struc, limit=None, **kwargs):
+        q = self.query(struc, **kwargs)
+        if limit is None:
+            return [res.easy_dict() for res in q]
+        else:
+            return [next(q).easy_dict() for i in range(limit)]
+    
+    def ok(self, struc, **kwargs):
+        for b in self.query(struc, **kwargs):
+            return True
+        return False
     
     def interactive(self):
         namespace = self.namespace()
@@ -73,11 +81,6 @@ class Universe:
                 break
             except Exception as e:
                 print("Error: {e}")
-    
-    def ok(self, struc):
-        for b in struc.prove({}):
-            return True
-        return False
     
     def __str__(self):
         return f"Universe with {len(self._predicates)} predicates:\n  "\

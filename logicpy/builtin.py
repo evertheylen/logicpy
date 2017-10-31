@@ -1,5 +1,8 @@
 
-from logicpy.structure import Structure, MultiArg
+import operator
+
+from logicpy.structure import Structure, MultiArg, BinaryArg
+from logicpy.data import Compound
 
 
 class TrueCls(Structure):
@@ -74,24 +77,72 @@ class DoMgu(SimpleOperation):
 DoMgu = DoMgu()
 
 
-class unify(MultiArg):
-    def __init__(self, left, right, do_mgu=True):
-        self.left = left
-        self.right = right
-        self.do_mgu = do_mgu
-    
-    def __str__(self):
-        return f"({self.left} == {self.right})"
+class unify_nomgu(BinaryArg):
+    op = '=='
     
     @property
     def args(self):
         return (self.left, self.right)
+    
+    def prove(self, result, dbg, newleft=None, newright=None):
+        result = result | {(newleft or self.left, newright or self.right)}
+        yield result
 
+
+class unify(unify_nomgu):
     def prove(self, result, dbg):
         result = result | {(self.left, self.right)}
-        if self.do_mgu:
-            dbg.prove(self, result)
-            yield from DoMgu.prove(result, dbg.next())
+        dbg.prove(self, result)
+        return DoMgu.prove(result, dbg.next())
+
+
+class EvalException(Exception):
+    pass
+
+
+class Eval(unify):
+    op = '@='
+    
+    operations = {
+        1: {
+            '-': operator.neg,
+            '+': operator.pos,
+        },
+        2: {
+            '+': operator.add,
+            '-': operator.sub,
+            '*': operator.mul,
+            '/': operator.truediv,
+            '//': operator.floordiv,
+            '%': operator.mod,
+            '@': operator.matmul,
+            '**': operator.pow,
+            '<<': operator.lshift,
+            '>>': operator.rshift,
+        }
+    }
+    
+    def prove(self, result, dbg):
+        dbg.prove(self, result)
+        try:
+            res = self.calculate(self.right)
+            yield from super().prove(result, dbg.next(), newright=res)
+        except MathException as e:
+            dbg.output(f"Eval failed {e}")
+
+    def calculate(self, expr):
+        if isinstance(expr, Compound):
+            try:
+                op = self.operations[len(expr.children)][expr.name]
+            except KeyError as e:
+                raise EvalException("Couldn't find operation: " + str(e))
+            
+            try:
+                return op(*(self.calculate(c) for c in expr.children))
+            except EvalException as e:
+                raise e  # rethrow
+            except Exception as e:
+                raise EvalException("Couldn't do operation: " + str(e))
         else:
-            yield result
+            return expr
 

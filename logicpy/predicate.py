@@ -2,8 +2,7 @@
 from collections import namedtuple
 
 from logicpy.structure import Structure, MultiArg
-from logicpy.builtin import True_, and_, unify, DoMgu
-from logicpy.data import Argument
+from logicpy.builtin import True_, Fail, and_, or_, unify_nomgu, DoMgu
 from logicpy.result import Result
 
 
@@ -19,16 +18,9 @@ class Clause:
         self.univ = univ
         self.signature = Signature(name, len(args))
         self.args = args
-        for a in args: a.set_scope(self)
         self.body = True_ if body is True else body
-        if self.body:
-            self.body.set_scope(self)
-            if self.univ:
-                self.univ.define(self)
-    
-    def to_structure(self):
-        return and_(*[unify(Argument(i, self.signature), arg, do_mgu=False) for i, arg in enumerate(self.args)],
-                    DoMgu, self.body)
+        if self.body and self.univ:
+            self.univ.define(self)
     
     def __str__(self):
         return str(self.signature)
@@ -59,34 +51,35 @@ class NoArgument(Clause, Structure):
             del self.univ._predicates[self.signature]
     
     def __setitem__(self, args, body):
-        # Usecase 3: /1 or higher clauses
+        # /1 or higher clauses
         self.del_if_new()
         if not isinstance(args, tuple): args = (args,)
         return Clause(self.signature.name, args, body, self.univ)
     
     def __call__(self, *args):
-        # Usecase 6: /1 or higher call
+        # /1 or higher call
         self.del_if_new()
         return PredicateCall(self.univ, Signature(self.signature.name, len(args)), args)
         
     def prove(self, result, dbg):
-        # Usecase 5: act like a PredicateCall (/0 structure)
-        # Luckily, we don't need weird inheritance tricks, since it's really pretty damn easy
-        dbg.prove(self, result)
-        return self.univ.get_pred_body(self.signature).prove(Result(), dbg.next())
+        # Act like a PredicateCall (/0 structure)
+        predcall = PredicateCall(self.univ, self.signature, ())
+        return predcall.prove(Result(), dbg.next())
 
 
 class Predicate:
-    def __init__(self, signature, structure):
+    def __init__(self, signature):
         self.signature = signature
-        self.structure = structure
+        self.clauses = []
+    
+    def add_clause(self, clause):
+        self.clauses.append(clause)
     
     def __str__(self):
         return str(self.signature)
     
     def __repr__(self):
-        return f"{self.signature.name}({', '.join(str(Argument(i, None)) for i in range(self.signature.arity))})"\
-                    f" :- {self.structure}"
+        return ";  ".join(map(repr, clauses))
 
 
 class PredicateCall(MultiArg):
@@ -98,11 +91,33 @@ class PredicateCall(MultiArg):
     def __str__(self):
         return f"{self.signature.name}({', '.join(map(str, self.args))})"
     
+    def __repr__(self):
+        return f"{self.signature.name}({', '.join(map(repr, self.args))})"
+    
+    def with_scope(self, scope):
+        return PredicateCall(self.univ, self.signature, [a.with_scope(scope) for a in self.args])
+    
     def prove(self, result, dbg):
         # TODO: limiting the result to only the pieces that are needed
-        # will improve performance of unification (a lot?)
+        # might improve performance of unification, but I'm unsure how
+        # exactly I might limit this...
         dbg.prove(self, result)
-        body = self.univ.get_pred_body(self.signature)
-        new_result = result | Result((Argument(i, id(result)), a) for i, a in enumerate(self.args))
-        return body.prove(new_result, dbg.next())
-    
+        arg_scope = self.scope_id()
+        pred = self.univ.get_pred(self.signature)
+        
+        if pred is None:
+            dbg.output(f"Couldn't find predicate with signature {self.signature}")
+            yield from Fail.prove(result, dbg)
+        else:
+            for clause in pred.clauses:
+                dbg.prove(clause, result)
+                clause_dbg = dbg.next()
+                scope = self.scope_id()
+                arg_set = {(a, b.with_scope(scope)) for a, b in zip(self.args, clause.args)}
+                new_result = result | arg_set
+                mgu = new_result.mgu(dbg)
+                if mgu:
+                    structure = clause.body.with_scope(scope)
+                    yield from structure.prove(new_result, clause_dbg.next())
+
+
