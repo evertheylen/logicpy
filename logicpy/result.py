@@ -1,5 +1,5 @@
 
-from logicpy.data import Term, Variable, BasicTerm
+from logicpy.data import Term, Variable, BasicTerm, has_occurence, replace
 from logicpy.debug import NoDebugger
 
 class MartelliMontanariFail(Exception):
@@ -34,7 +34,7 @@ class Result(frozenset):
         return '{' + ', '.join(f"{L} = {R}" for L, R in self) + '}'
     
     def easy_dict(self):
-        return {L.name: R for L, R in self if isinstance(L, Variable) and L.scope is None}
+        return {L.name: R for L, R in self if isinstance(L, Variable) and L.scope == -1}
     
     
     # Prolog additions ....................................
@@ -79,16 +79,16 @@ class Result(frozenset):
                     raise MartelliMontanariFail(f"Conflict {A}, {B}")
             elif isinstance(A, Variable) and A != B:
                 # substitute
-                if B.has_occurence(A):
+                if has_occurence(B, A):
                     raise MartelliMontanariFail(f"Occurs check {A}, {B}")
                 # While elegant, this is somewhat slow...
-                replaced_E = {(X.replace(A, B), Y.replace(A, B)) for (X,Y) in E}
+                replaced_E = {(replace(X, A, B), replace(Y, A, B)) for (X,Y) in E}
                 if E == replaced_E:
                     did_a_thing = False
                 else:
                     E = replaced_E
                 E.add((A, B))  # Add it back
-            elif not isinstance(A, (Structure, Term)) or isinstance(B, (Structure, Term)):
+            elif (not isinstance(A, (Structure, Term))) and (not isinstance(B, (Structure, Term))):
                 if A != B:
                     raise MartelliMontanariFail(f"Constant Conflict {A}, {B}")
             else:

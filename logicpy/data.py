@@ -1,4 +1,33 @@
 
+
+def with_scope(obj, scope):
+    if hasattr(obj, 'with_scope'):
+        return obj.with_scope(scope)
+    else:
+        return obj
+
+
+def has_occurence(obj, var):
+    if hasattr(obj, 'has_occurence'):
+        return obj.has_occurence(var)
+    else:
+        return False
+
+
+def occurences(obj, O):
+    if hasattr(obj, 'occurences'):
+        return obj.occurences(O)
+
+
+def replace(obj, A, B):
+    if obj == A:
+        return B
+    elif hasattr(obj, 'replace'):
+        return obj.replace(A, B)
+    else:
+        return obj
+
+
 def binary_compounder(name):
     def operation(self, other):
         return InfixCompound(name, (self, other))
@@ -49,7 +78,7 @@ class Term:
     def __eq__(self, other):
         from logicpy.builtin import unify
         if self.been_scoped:
-            return self.really_equal(other)
+            return type(self) == type(other) and self.really_equal(other)
         else:
             return unify(self, other)
 
@@ -78,12 +107,6 @@ class NamedTerm(Term):
     
     def occurences(self, O):
         pass
-    
-    def replace(self, A, B):
-        if self == A:
-            return B
-        else:
-            return self
     
     def with_scope(self, scope):
         if self.been_scoped:
@@ -122,18 +145,18 @@ class Compound(BasicTerm):
         return hash((self.name, self.children))
     
     def has_occurence(self, var):
-        return any(c.has_occurence(var) for c in self.children)
+        return any(has_occurence(c, var) for c in self.children)
     
     def occurences(self, O):
         for c in self.children:
-            c.occurences(O)
+            occurences(c, O)
     
     def replace(self, A, B):
-        new_children = tuple((B if c == A else c.replace(A, B)) for c in self.children)
-        return Compound(self.name, new_children)
+        new_children = tuple(replace(c, A, B) for c in self.children)
+        return Compound(self.name, new_children, been_scoped=self.been_scoped)
     
     def with_scope(self, scope):
-        return Compound(self.name, tuple(c.with_scope(scope) for c in self.children), been_scoped=True)
+        return Compound(self.name, tuple(with_scope(c, scope) for c in self.children), been_scoped=True)
 
 
 class InfixCompound(Compound):
@@ -152,9 +175,15 @@ class Variable(NamedTerm):
         self.name = name
         self.scope = scope
     
+    def __str__(self):
+        if self.scope:
+            return f"{self.name}:{self.scope % 997}"
+        else:
+            super().__str__()
+    
     def __repr__(self):
         if self.scope:
-            return f"Variable({self.name!r}, {self.scope % 97})"
+            return f"Variable({self.name!r}, {self.scope})"
         else:
             return f"Variable({self.name!r})"
     

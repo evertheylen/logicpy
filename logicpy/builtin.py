@@ -84,14 +84,14 @@ class unify_nomgu(BinaryArg):
     def args(self):
         return (self.left, self.right)
     
-    def prove(self, result, dbg, newleft=None, newright=None):
-        result = result | {(newleft or self.left, newright or self.right)}
+    def prove(self, result, dbg):
+        result = result | {(self.left, self.right)}
         yield result
 
 
 class unify(unify_nomgu):
-    def prove(self, result, dbg):
-        result = result | {(self.left, self.right)}
+    def prove(self, result, dbg, newleft=None, newright=None):
+        result = result | {(newleft or self.left, newright or self.right)}
         dbg.prove(self, result)
         return DoMgu.prove(result, dbg.next())
 
@@ -101,7 +101,7 @@ class EvalException(Exception):
 
 
 class Eval(unify):
-    op = '@='
+    op = '<<'
     
     operations = {
         1: {
@@ -117,8 +117,6 @@ class Eval(unify):
             '%': operator.mod,
             '@': operator.matmul,
             '**': operator.pow,
-            '<<': operator.lshift,
-            '>>': operator.rshift,
         }
     }
     
@@ -127,7 +125,7 @@ class Eval(unify):
         try:
             res = self.calculate(self.right)
             yield from super().prove(result, dbg.next(), newright=res)
-        except MathException as e:
+        except EvalException as e:
             dbg.output(f"Eval failed {e}")
 
     def calculate(self, expr):

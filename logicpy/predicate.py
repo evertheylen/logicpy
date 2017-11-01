@@ -4,6 +4,7 @@ from collections import namedtuple
 from logicpy.structure import Structure, MultiArg
 from logicpy.builtin import True_, Fail, and_, or_, unify_nomgu, DoMgu
 from logicpy.result import Result
+from logicpy.data import with_scope
 
 
 class Signature(namedtuple('_Signature', ('name', 'arity'))):
@@ -95,7 +96,7 @@ class PredicateCall(MultiArg):
         return f"{self.signature.name}({', '.join(map(repr, self.args))})"
     
     def with_scope(self, scope):
-        return PredicateCall(self.univ, self.signature, [a.with_scope(scope) for a in self.args])
+        return PredicateCall(self.univ, self.signature, [with_scope(a, scope) for a in self.args])
     
     def prove(self, result, dbg):
         # TODO: limiting the result to only the pieces that are needed
@@ -110,14 +111,14 @@ class PredicateCall(MultiArg):
             yield from Fail.prove(result, dbg)
         else:
             for clause in pred.clauses:
-                dbg.prove(clause, result)
                 clause_dbg = dbg.next()
+                clause_dbg.prove(clause, result)
                 scope = self.scope_id()
-                arg_set = {(a, b.with_scope(scope)) for a, b in zip(self.args, clause.args)}
+                arg_set = {(a, with_scope(b, scope)) for a, b in zip(self.args, clause.args)}
                 new_result = result | arg_set
-                mgu = new_result.mgu(dbg)
+                mgu = new_result.mgu(clause_dbg)
                 if mgu:
                     structure = clause.body.with_scope(scope)
-                    yield from structure.prove(new_result, clause_dbg.next())
+                    yield from structure.prove(mgu, clause_dbg.next())
 
 

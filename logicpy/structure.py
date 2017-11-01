@@ -1,6 +1,7 @@
 
 import random
 
+from logicpy.data import with_scope, occurences, has_occurence
 
 class Structure:
     # builtin operators, see below
@@ -15,10 +16,6 @@ class Structure:
     def __or__(self, other):
         from logicpy.builtin import or_
         return or_(self, other)
-    
-    def __eq__(self, other):
-        from logicpy.builtin import unify
-        return unify(self, other)
     
     def with_scope(self, scope):
         return self
@@ -39,15 +36,15 @@ class MultiArg(Structure):
         return type(self).__name__ + '(' + ', '.join(map(repr, self.args)) + ')'
         
     def with_scope(self, scope):
-        args = [a.with_scope(scope) for a in self.args]
+        args = [with_scope(a, scope) for a in self.args]
         return type(self)(*args)
     
     def occurences(self, O):
         for a in self.args:
-            a.occurences(O)
+            occurences(a, O)
     
     def has_occurence(self, var):
-        return any(a.has_occurence(var) for a in self.args)
+        return any(has_occurence(a, var) for a in self.args)
 
 
 class BinaryArg(MultiArg):

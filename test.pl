@@ -1,6 +1,6 @@
 
 bla(foo).
-bla(bar).
+% bla(bar).
 bla(both(X, Y)) :- bla(X), bla(Y).
 
 sum(zero, X, X).
