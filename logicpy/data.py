@@ -1,4 +1,9 @@
 
+import operator
+
+
+# Free functions to enable working with 'foreign' constants
+# ---------------------------------------------------------
 
 def with_scope(obj, scope):
     if hasattr(obj, 'with_scope'):
@@ -28,15 +33,27 @@ def replace(obj, A, B):
         return obj
 
 
-def binary_compounder(name):
+def instantiate(expr, result):
+    if hasattr(expr, 'instantiate'):
+        return expr.instantiate(result)
+    else:
+        return expr
+
+
+
+# Terms and builtin operations
+# ----------------------------
+
+
+def binary_compounder(name, func):
     def operation(self, other):
-        return InfixCompound(name, (self, other))
+        return InfixEvalCompound(name, func, (self, other))
     return operation
 
 
-def unary_compounder(name):
+def unary_compounder(name, func):
     def operation(self):
-        return PrefixCompound(name, (self,))
+        return PrefixEvalCompound(name, func, (self,))
     return operation
 
 
@@ -50,30 +67,50 @@ class Term:
         else:
             return type(self)(been_scoped=True)
     
-    # Some operand support
-    __add__ = __radd__ = binary_compounder('+')
-    __sub__ = __rsub__ = binary_compounder('-')
-    __mul__ = __rmul__ = binary_compounder('*')
-    __div__ = __rdiv__ = binary_compounder('/')
-    __floordiv__ = __rfloordiv__ = binary_compounder('//')
-    __mod__ = __rmod__ = binary_compounder('%')
-    __matmul__ = __rmatmul__ = binary_compounder('@')
-    __pow__ = __rpow__ = binary_compounder('**')
+    # Basic operand support ...............................
     
-    __pos__ = unary_compounder('+')
-    __neg__ = unary_compounder('-')
+    __add__ = __radd__ =            binary_compounder('+', operator.add)
+    __sub__ = __rsub__ =            binary_compounder('-', operator.sub)
+    __mul__ = __rmul__ =            binary_compounder('*', operator.mul)
+    __div__ = __rdiv__ =            binary_compounder('/', operator.truediv)
+    __floordiv__ = __rfloordiv__ =  binary_compounder('//', operator.floordiv)
+    __mod__ = __rmod__ =            binary_compounder('%', operator.mod)
+    __matmul__ = __rmatmul__ =      binary_compounder('@', operator.matmul)
+    __pow__ = __rpow__ =            binary_compounder('**', operator.pow)
+    
+    __pos__ = unary_compounder('+', operator.pos)
+    __neg__ = unary_compounder('-', operator.neg)
     
     
-    # TODO: comparisons
+    # Comparisons .........................................
+    
+    def __lt__(l, r):
+        from logicpy.builtin import Lower
+        return Lower(l, r)
+    
+    def __le__(l, r):
+        from logicpy.builtin import LowerOrEqual
+        return LowerOrEqual(l, r)
+    
+    def __gt__(l, r):
+        from logicpy.builtin import Greater
+        return Greater(l, r)
+    
+    def __ge__(l, r):
+        from logicpy.builtin import GreaterOrEqual
+        return GreaterOrEqual(l, r)
+    
+    
+    # Some random operator overloads ......................
     
     def __lshift__(self, other):
         "Replaces is in Prolog"
-        from logicpy.builtin import Eval
-        return Eval(self, other)
+        from logicpy.builtin import Evaluation
+        return Evaluation(self, other)
     
     def __rshift__(self, other):
-        from logicpy.builtin import Eval
-        return Eval(other, self)
+        from logicpy.builtin import Evaluation
+        return Evaluation(other, self)
     
     def __eq__(self, other):
         from logicpy.builtin import unify
@@ -83,6 +120,10 @@ class Term:
             return unify(self, other)
 
 
+
+# Subclasses of Term: Atom, Compound, Variable and some shared functionality
+# --------------------------------------------------------------------------
+
 class NamedTerm(Term):
     TERM_TYPE = 'Term'
     
@@ -91,7 +132,7 @@ class NamedTerm(Term):
         self.name = name
     
     def __str__(self):
-        return self.name
+        return str(self.name)
     
     def __repr__(self):
         return f"{type(self).__name__}({self.name!r})"
@@ -127,6 +168,10 @@ class Atom(BasicTerm):
     children = []
 
 
+class NotInstantiated(Exception):
+    pass
+
+
 class Compound(BasicTerm):
     def __init__(self, name, children, been_scoped=False):
         super().__init__(name, been_scoped)
@@ -136,7 +181,7 @@ class Compound(BasicTerm):
         return f"{self.name}({', '.join(map(str, self.children))})"
     
     def __repr__(self):
-        return f"Compound({self.name!r}, {self.children!r})"
+        return f"{type(self).__name__}({self.name!r}, {self.children!r})"
     
     def really_equal(self, other):
         return self.name == other.name and self.children == other.children
@@ -158,13 +203,32 @@ class Compound(BasicTerm):
     def with_scope(self, scope):
         return Compound(self.name, tuple(with_scope(c, scope) for c in self.children), been_scoped=True)
 
+    def instantiate(self, result):
+        return Compound(self.name, tuple(instantiate(c, result) for c in self.children), been_scoped=self.been_scoped)
 
-class InfixCompound(Compound):
+
+class EvalCompound(Compound):
+    def __init__(self, name, func, children, been_scoped=False):
+        super().__init__(name, children, been_scoped)
+        self.func = func
+    
+    def replace(self, A, B):
+        new_children = tuple(replace(c, A, B) for c in self.children)
+        return EvalCompound(self.name, self.func, new_children, been_scoped=self.been_scoped)
+    
+    def with_scope(self, scope):
+        return EvalCompound(self.name, self.func, tuple(with_scope(c, scope) for c in self.children), been_scoped=True)
+
+    def instantiate(self, result):
+        return EvalCompound(self.name, self.func, tuple(instantiate(c, result) for c in self.children), been_scoped=self.been_scoped)
+
+
+class InfixEvalCompound(EvalCompound):
     def __str__(self):
         return '(' + f" {self.name} ".join(map(str, self.children)) + ')'
 
 
-class PrefixCompound(Compound):
+class PrefixEvalCompound(EvalCompound):
     def __str__(self):
         return self.name + " ".join(map(str, self.children))
 
@@ -201,4 +265,7 @@ class Variable(NamedTerm):
     
     def with_scope(self, scope):
         return Variable(self.name, scope)
+
+    def instantiate(self, result):
+        return result.get_var(self)
 

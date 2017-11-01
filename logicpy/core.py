@@ -106,8 +106,12 @@ class Namespace:
 
 
 class Underscore(NamedTerm):
-    def __init__(self):
-        super().__init__('_')
+    def __init__(self, name='_', been_scoped=False):
+        super().__init__(name, been_scoped)
+    
+    def with_scope(self, scope):
+        # Just create a random variable
+        return Variable("_", Structure.scope_id())
     
     def __getattr__(self, name):
         if name[0].isupper() or name[0] == '_':  # Variable

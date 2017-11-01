@@ -1,8 +1,10 @@
 
 import operator
+from functools import wraps
 
 from logicpy.structure import Structure, MultiArg, BinaryArg
-from logicpy.data import Compound
+from logicpy.data import Compound, EvalCompound, Variable, instantiate
+from logicpy.result import Uninstantiated
 
 
 class TrueCls(Structure):
@@ -45,7 +47,7 @@ class and_(MultiArg):
             return
         
         arg = self.args[n]
-        for new_result in arg.prove(result, dbg.next()):
+        for new_result in arg.prove(result, dbg.from_next()):
             yield from self.prove_arg(n+1, new_result, dbg)
 
 
@@ -61,23 +63,7 @@ class or_(MultiArg):
             yield from arg.prove(result, dbg.next())
 
 
-class SimpleOperation(Structure):
-    def __str__(self):
-        return type(self).__name__
-
-
-class DoMgu(SimpleOperation):
-    def prove(self, result, dbg):
-        dbg.prove(self, result)
-        mgu = result.mgu(dbg)
-        if mgu:
-            dbg.proven(self, mgu)
-            yield mgu
-
-DoMgu = DoMgu()
-
-
-class unify_nomgu(BinaryArg):
+class unify(BinaryArg):
     op = '=='
     
     @property
@@ -86,61 +72,100 @@ class unify_nomgu(BinaryArg):
     
     def prove(self, result, dbg):
         result = result | {(self.left, self.right)}
-        yield result
+        mgu = result.mgu(dbg)
+        if mgu:
+            dbg.proven(self, mgu)
+            yield mgu
 
 
-class unify(unify_nomgu):
-    def prove(self, result, dbg, newleft=None, newright=None):
-        result = result | {(newleft or self.left, newright or self.right)}
-        dbg.prove(self, result)
-        return DoMgu.prove(result, dbg.next())
-
+# Builtin operator support (mainly math)
+# --------------------------------------
 
 class EvalException(Exception):
     pass
 
 
-class Eval(unify):
+def evaluate(expr):
+    if isinstance(expr, EvalCompound):
+        try:
+            return expr.func(*(evaluate(c) for c in expr.children))
+        except EvalException as e:
+            raise e  # rethrow
+        except Exception as e:
+            raise EvalException("Couldn't do operation: " + str(e))
+    else:
+        return expr
+
+
+class Evaluation(BinaryArg):
     op = '<<'
-    
-    operations = {
-        1: {
-            '-': operator.neg,
-            '+': operator.pos,
-        },
-        2: {
-            '+': operator.add,
-            '-': operator.sub,
-            '*': operator.mul,
-            '/': operator.truediv,
-            '//': operator.floordiv,
-            '%': operator.mod,
-            '@': operator.matmul,
-            '**': operator.pow,
-        }
-    }
     
     def prove(self, result, dbg):
         dbg.prove(self, result)
         try:
-            res = self.calculate(self.right)
-            yield from super().prove(result, dbg.next(), newright=res)
-        except EvalException as e:
-            dbg.output(f"Eval failed {e}")
+            res = evaluate(instantiate(self.right, result))
+            result = result | {(self.left, res)}
+            mgu = result.mgu(dbg)
+            if mgu:
+                dbg.proven(self, mgu)
+                yield mgu
+        except (EvalException, Uninstantiated) as e:
+            dbg.output(f"Eval failed: {e}")
 
-    def calculate(self, expr):
-        if isinstance(expr, Compound):
-            try:
-                op = self.operations[len(expr.children)][expr.name]
-            except KeyError as e:
-                raise EvalException("Couldn't find operation: " + str(e))
-            
-            try:
-                return op(*(self.calculate(c) for c in expr.children))
-            except EvalException as e:
-                raise e  # rethrow
-            except Exception as e:
-                raise EvalException("Couldn't do operation: " + str(e))
-        else:
-            return expr
+
+class Comparison(BinaryArg):
+    def prove(self, result, dbg):
+        dbg.prove(self, result)
+        try:
+            l = evaluate(instantiate(self.left, result))
+            r = evaluate(instantiate(self.right, result))
+            if self.compare(l, r):
+                dbg.proven(self, result)
+                yield result
+        except (EvalException, Uninstantiated) as e:
+            dbg.output(f"Comparison failed: {e}")
+        
+
+
+class Lower(Comparison):
+    op = '<'
+    compare = lambda s, l, r: l < r
+
+
+class LowerOrEqual(Comparison):
+    op = '<='
+    compare = lambda s, l, r: l <= r
+
+
+class Greater(Comparison):
+    op = '>'
+    compare = lambda s, l, r: l > r
+
+
+class GreaterOrEqual(Comparison):
+    op = '>='
+    compare = lambda s, l, r: l >= r
+
+
+def evaluated(func):
+    "Turns a function into a term that is evaluated at runtime"
+    @wraps(func)
+    def wrapper(*args):
+        return EvalCompound(func.__name__, func, args)
+    return wrapper
+
+
+@evaluated
+def max_(x, y):
+    return max(x, y)
+
+
+@evaluated
+def min_(x, y):
+    return min(x, y)
+
+@evaluated
+def abs_(x):
+    return abs(x)
+
 

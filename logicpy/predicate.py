@@ -2,7 +2,7 @@
 from collections import namedtuple
 
 from logicpy.structure import Structure, MultiArg
-from logicpy.builtin import True_, Fail, and_, or_, unify_nomgu, DoMgu
+from logicpy.builtin import True_, Fail, and_, or_
 from logicpy.result import Result
 from logicpy.data import with_scope
 

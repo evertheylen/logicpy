@@ -19,7 +19,8 @@
 #   u.sibling[X, Y] = u.parent(P, X) & u.parent(_.P, _.Y)
 
 from .core import Universe, Underscore
+from .builtin import *
 
 _ = Underscore()
 
-__all__ = ('Universe', '_')
+__all__ = ('_', 'Universe', 'True_', 'Fail', 'and_', 'or_', 'max_', 'min_', 'abs_', 'evaluated')

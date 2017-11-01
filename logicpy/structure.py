@@ -51,3 +51,7 @@ class BinaryArg(MultiArg):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+    
+    @property
+    def args(self):
+        return (self.left, self.right)
