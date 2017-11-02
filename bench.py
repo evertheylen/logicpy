@@ -21,13 +21,20 @@ n.fib[_.N, _.Res] = and_(
 
 fib = lambda x: {0: 1, 1: 2, 2: 3}.get(x) or fib(x-1) + fib(x-2)
 
-for arg in range(4, 8):
+for arg in range(8):
     check = fib(arg)
     
-    start = time.time()
-    res =  u.simple_query(n.fib(arg, _.X))[0]['X']
-    end = time.time()
+    try:
+        start = time.time()
+        res = u.simple_query(n.fib(arg, _.X))[0]['X']
+        end = time.time()
+        
+        assert check == res, f"{check} != {res}"
+        print(f"{arg}\t{end - start}")
+    except Exception as e:
+        print("\nFAIL --------------------------------------------------")
+        print(e, "\n")
+        print(u.simple_query(n.fib(arg, _.X), debug=True))
+        break
     
-    assert check == res, f"{check} != {res}"
-    print(f"{arg}\t{end - start}")
 

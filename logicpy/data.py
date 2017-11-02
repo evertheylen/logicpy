@@ -243,7 +243,7 @@ class Variable(NamedTerm):
         if self.scope:
             return f"{self.name}:{self.scope % 997}"
         else:
-            super().__str__()
+            return super().__str__()
     
     def __repr__(self):
         if self.scope:

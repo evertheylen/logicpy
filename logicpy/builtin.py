@@ -9,7 +9,6 @@ from logicpy.result import Uninstantiated
 
 class TrueCls(Structure):
     def prove(self, result, dbg):
-        dbg.prove(self, result)
         dbg.proven(self, result)
         yield result
 
@@ -73,7 +72,7 @@ class unify(BinaryArg):
     def prove(self, result, dbg):
         result = result | {(self.left, self.right)}
         mgu = result.mgu(dbg)
-        if mgu:
+        if mgu is not None:
             dbg.proven(self, mgu)
             yield mgu
 
@@ -106,7 +105,7 @@ class Evaluation(BinaryArg):
             res = evaluate(instantiate(self.right, result))
             result = result | {(self.left, res)}
             mgu = result.mgu(dbg)
-            if mgu:
+            if mgu is not None:
                 dbg.proven(self, mgu)
                 yield mgu
         except (EvalException, Uninstantiated) as e:

@@ -4,7 +4,7 @@ from collections import namedtuple
 from logicpy.structure import Structure, MultiArg
 from logicpy.builtin import True_, Fail, and_, or_
 from logicpy.result import Result
-from logicpy.data import with_scope
+from logicpy.data import with_scope, Variable
 
 
 class Signature(namedtuple('_Signature', ('name', 'arity'))):
@@ -103,22 +103,32 @@ class PredicateCall(MultiArg):
         # might improve performance of unification, but I'm unsure how
         # exactly I might limit this...
         dbg.prove(self, result)
-        arg_scope = self.scope_id()
         pred = self.univ.get_pred(self.signature)
         
         if pred is None:
             dbg.output(f"Couldn't find predicate with signature {self.signature}")
-            yield from Fail.prove(result, dbg)
         else:
             for clause in pred.clauses:
-                clause_dbg = dbg.next()
-                clause_dbg.prove(clause, result)
                 scope = self.scope_id()
-                arg_set = {(a, with_scope(b, scope)) for a, b in zip(self.args, clause.args)}
-                new_result = result | arg_set
-                mgu = new_result.mgu(clause_dbg)
-                if mgu:
-                    structure = clause.body.with_scope(scope)
-                    yield from structure.prove(mgu, clause_dbg.next())
-
+                structure = clause.body.with_scope(scope)
+                
+                arg_res = Result((with_scope(a, scope), b) for a, b in zip(clause.args, self.args))
+                total_res = (arg_res | result).mgu()
+                if total_res is None: 
+                    dbg.output(f"Failed to unify arguments for clause {clause!r}")
+                    continue
+                else:
+                    dbg.output(f"Unified arguments for clause {clause!r}: {total_res}")
+                
+                relevant_res = Result((a, b) for a, b in total_res if (a,b) in arg_res or (isinstance(a, Variable) and a.scope == scope))
+                
+                clause_dbg = dbg.next()
+                clause_dbg.prove(clause, relevant_res)
+                
+                for new_res in structure.prove(relevant_res, dbg or clause_dbg.from_next()):
+                    total_res = new_res | result | arg_res
+                    mgu = total_res.mgu()
+                    if mgu is not None:
+                        clause_dbg.proven(clause, mgu)
+                        yield mgu
 

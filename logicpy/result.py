@@ -31,6 +31,12 @@ class Result:
     def __len__(self):
         return len(self.identities)
     
+    def __iter__(self):
+        return iter(self.identities)
+    
+    def __contains__(self, obj):
+        return obj in self.identities
+    
     
     # Representation and easy usage ......................
     

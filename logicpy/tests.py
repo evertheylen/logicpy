@@ -46,6 +46,7 @@ class Peano(UniverseAndNamespace):
     
     def do_sum(self, a, b):
         res = self.u.simple_query(self.n.sum(peano(a), peano(b), _.X))
+        #print(", ".join(map(str, res)))
         total = inv_peano(res[0]['X'])
         self.assertEqual(total, a+b)
     
