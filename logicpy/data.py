@@ -122,7 +122,7 @@ class Term:
     def __ne__(self, other):
         from logicpy.builtin import unify, neg
         if self.been_scoped:
-            return type(self) != type(other) and (not self.really_equal(other))
+            return type(self) != type(other) or (not self.really_equal(other))
         else:
             return neg(unify(self, other))
 

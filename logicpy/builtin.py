@@ -77,6 +77,12 @@ class unify(BinaryArg):
             yield mgu
         except UnificationFail as e:
             dbg.output(f"Unification failed: {e}")
+    
+    def __bool__(self):
+        if isinstance(self.left, Term):
+            return self.left.really_equal(self.right)
+        else:
+            return self.right.really_equal(self.left)
 
 
 class PredicateCut(Exception):

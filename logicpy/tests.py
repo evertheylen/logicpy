@@ -16,13 +16,11 @@ class Various(unittest.TestCase):
         
         n.parent[_.alice, _.bob] = True
         n.parent[_.alice, _.charlie] = True
-        n.sibling[_.X, _.Y] = n.parent(_.P, _.X) & n.parent(_.P, _.Y)
+        n.sibling[_.X, _.Y] = n.parent(_.P, _.X) & n.parent(_.P, _.Y) & (_.X != _.Y)
         
         expected = [
-            {'U': _.bob, 'V': _.bob},
             {'U': _.bob, 'V': _.charlie},
-            {'U': _.charlie, 'V': _.bob},
-            {'U': _.charlie, 'V': _.charlie}
+            {'U': _.charlie, 'V': _.bob}
         ]
         
         res = u.simple_query(n.sibling(_.U, _.V))
@@ -141,7 +139,7 @@ class BalancedTrees(UniverseAndNamespace):
         inp = node(empty,3,node(empty,4,node(empty,2,empty)))
         out = node(node(empty,7,empty),3,node(empty,4,node(empty,2,empty)))
         res = self.u.simple_query(self.n.add_to(node(empty,3,node(empty,4,node(empty,2,empty))), 7, _.X))[0]['X']
-        self.assertEqual(inp, out)
+        self.assertTrue(res.really_equal(out))
 
 
 if __name__ == '__main__':
