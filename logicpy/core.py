@@ -30,11 +30,8 @@ class Universe:
             return None
     
     def query(self, struc, *, debug=False):
-        struc = struc.with_scope(-1)
-        for res in struc.prove(Result(), Debugger() if debug else NoDebugger()):
-            res = res.mgu()
-            if res is not None:
-                yield res
+        struc = struc.with_scope(0)
+        yield from struc.prove(Result(), Debugger() if debug else NoDebugger())
     
     def simple_query(self, struc, limit=None, **kwargs):
         q = self.query(struc, **kwargs)
@@ -66,21 +63,22 @@ class Universe:
                 inp = input("? ")
                 struc = eval(inp, {}, shell_locals)
                 if hasattr(struc, 'prove'):
-                    for res in struc.prove(Result()):
-                        print(res)
+                    for res in self.query(struc):
+                        print(res, end='', flush=True)
                         char = getch()
+                        print(char)
                         if char in '\n.':
                             break
                         elif char == ';':
-                            continue
+                            pass
                         else:
-                            print(f"Unknown action '{char}'")
+                            print(f"Press ';' for more solutions, '.' or Enter to stop")
                 else:
                     print(f"Not a provable structure: {struc}")
             except EOFError:
                 break
             except Exception as e:
-                print("Error: {e}")
+                print(f"Error: {e}")
     
     def __str__(self):
         return f"Universe with {len(self._predicates)} predicates:\n  "\

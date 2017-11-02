@@ -2,9 +2,14 @@
 from collections import namedtuple
 
 from logicpy.structure import Structure, MultiArg
-from logicpy.builtin import True_, Fail, and_, or_
-from logicpy.result import Result
+from logicpy.builtin import True_, Fail, and_, or_, PredicateCut
+from logicpy.result import Result, UnificationFail
 from logicpy.data import with_scope, Variable
+
+
+class PredicateNotFound(Exception):
+    pass
+
 
 
 class Signature(namedtuple('_Signature', ('name', 'arity'))):
@@ -99,36 +104,36 @@ class PredicateCall(MultiArg):
         return PredicateCall(self.univ, self.signature, [with_scope(a, scope) for a in self.args])
     
     def prove(self, result, dbg):
-        # TODO: limiting the result to only the pieces that are needed
-        # might improve performance of unification, but I'm unsure how
-        # exactly I might limit this...
         dbg.prove(self, result)
         pred = self.univ.get_pred(self.signature)
         
         if pred is None:
-            dbg.output(f"Couldn't find predicate with signature {self.signature}")
+            raise PredicateNotFound(f"Couldn't find predicate with signature {self.signature}")
         else:
-            for clause in pred.clauses:
-                scope = self.scope_id()
-                structure = clause.body.with_scope(scope)
-                
-                arg_res = Result((with_scope(a, scope), b) for a, b in zip(clause.args, self.args))
-                total_res = (arg_res | result).mgu()
-                if total_res is None: 
-                    dbg.output(f"Failed to unify arguments for clause {clause!r}")
-                    continue
-                else:
-                    dbg.output(f"Unified arguments for clause {clause!r}: {total_res}")
-                
-                relevant_res = Result((a, b) for a, b in total_res if (a,b) in arg_res or (isinstance(a, Variable) and a.scope == scope))
-                
-                clause_dbg = dbg.next()
-                clause_dbg.prove(clause, relevant_res)
-                
-                for new_res in structure.prove(relevant_res, dbg or clause_dbg.from_next()):
-                    total_res = new_res | result | arg_res
-                    mgu = total_res.mgu()
-                    if mgu is not None:
-                        clause_dbg.proven(clause, mgu)
-                        yield mgu
-
+            try:
+                for i, clause in enumerate(pred.clauses):
+                    scope = self.scope_id()
+                    structure = clause.body.with_scope(scope)
+                    
+                    arg_res = Result((with_scope(a, scope), b) for a, b in zip(clause.args, self.args))
+                    try:
+                        total_res = (arg_res | result).mgu()
+                        dbg.output(f"Unified arguments for clause {i}")
+                    except UnificationFail as e:
+                        dbg.output(f"Failed to unify arguments for clause {i}: {e}")
+                        continue
+                    
+                    relevant_res = Result((a, b) for a, b in total_res if (a,b) in arg_res or (isinstance(a, Variable) and a.scope == scope))
+                    
+                    clause_dbg = dbg.next()
+                    clause_dbg.prove(clause, relevant_res)
+                    
+                    for new_res in structure.prove(relevant_res, dbg or clause_dbg.from_next()):
+                        try:
+                            mgu = (new_res | result | arg_res).mgu()
+                            clause_dbg.proven(clause, mgu)
+                            yield mgu
+                        except UnificationFail as e:
+                            clause_dbg.output(f"Failed to unify resulting sets: {e}")
+            except PredicateCut:
+                pass  # Look at how easy that is ;)

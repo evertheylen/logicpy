@@ -55,3 +55,23 @@ class BinaryArg(MultiArg):
     @property
     def args(self):
         return (self.left, self.right)
+
+
+class MonoArg(Structure):
+    def __init__(self, arg):
+        self.arg = arg
+    
+    def __str__(self):
+        return f"{type(self).__name__}({self.arg})"
+    
+    def __repr__(self):
+        return f"{type(self).__name__}({self.arg!r})"
+    
+    def with_scope(self, scope):
+        return type(self)(with_scope(self.arg, scope))
+    
+    def occurences(self, O):
+        occurences(self.arg, O)
+    
+    def has_occurence(self, var):
+        return has_occurence(self.arg, var)

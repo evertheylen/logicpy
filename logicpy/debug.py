@@ -16,7 +16,7 @@ class NoDebugger:
         return self
     
     def __bool__(self):
-        return True
+        return False
 
 
 def truncate(s, length):
@@ -51,6 +51,5 @@ class Debugger:
         return type(self)(self.level + 1, self.level)
     
     def __bool__(self):
-        # For `dbg or` tricks
-        return False
+        return True
     

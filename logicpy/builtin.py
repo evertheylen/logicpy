@@ -2,9 +2,9 @@
 import operator
 from functools import wraps
 
-from logicpy.structure import Structure, MultiArg, BinaryArg
+from logicpy.structure import Structure, MultiArg, BinaryArg, MonoArg
 from logicpy.data import Compound, EvalCompound, Variable, instantiate
-from logicpy.result import Uninstantiated
+from logicpy.result import ResultException, UnificationFail
 
 
 class TrueCls(Structure):
@@ -32,7 +32,7 @@ class and_(MultiArg):
     op = '&'
     
     def __and__(self, other):
-        return and_(self.args + (other,))
+        return and_(*(self.args + (other,)))
     
     def prove(self, result, dbg):
         # Backtracking implementation!
@@ -54,7 +54,7 @@ class or_(MultiArg):
     op = '|'
     
     def __or__(self, other):
-        return or_(self.args + (other,))
+        return or_(*(self.args + (other,)))
     
     def prove(self, result, dbg):
         dbg.prove(self, result)
@@ -71,10 +71,32 @@ class unify(BinaryArg):
     
     def prove(self, result, dbg):
         result = result | {(self.left, self.right)}
-        mgu = result.mgu(dbg)
-        if mgu is not None:
+        try:
+            mgu = result.mgu()
             dbg.proven(self, mgu)
             yield mgu
+        except UnificationFail as e:
+            dbg.output(f"Unification failed: {e}")
+
+
+class PredicateCut(Exception):
+    pass
+
+
+class _Cut(Structure):
+    def prove(self, result, dbg):
+        dbg.output("Cut!")
+        yield result
+        raise PredicateCut()
+
+cut = _Cut()
+
+
+class neg(MonoArg):
+    def prove(self, result, dbg):
+        for _ in self.arg.prove(result, dbg.next()):
+            return
+        yield result
 
 
 # Builtin operator support (mainly math)
@@ -104,11 +126,10 @@ class Evaluation(BinaryArg):
         try:
             res = evaluate(instantiate(self.right, result))
             result = result | {(self.left, res)}
-            mgu = result.mgu(dbg)
-            if mgu is not None:
-                dbg.proven(self, mgu)
-                yield mgu
-        except (EvalException, Uninstantiated) as e:
+            mgu = result.mgu()
+            dbg.proven(self, mgu)
+            yield mgu
+        except (EvalException, ResultException) as e:
             dbg.output(f"Eval failed: {e}")
 
 
@@ -166,5 +187,4 @@ def min_(x, y):
 @evaluated
 def abs_(x):
     return abs(x)
-
 
