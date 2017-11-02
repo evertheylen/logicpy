@@ -43,7 +43,7 @@ It has, obviously, perfect integration with Python. There are two main ways to i
 
 ## Why not use it?
 
-I didn't add any metaprogramming, since this would logically be Python's job. There is no 'standard library'. There are still going to be a lot of bugs.
+I didn't add any metaprogramming, since this would logically be Python's job. There is no 'standard library'. There are still going to be a lot of bugs. This project contains more lines of Python than the total amount of lines of Prolog I have written in my life, so some things might behave unexpectedly (but I wouldn't know currently). It's more of a proof-of-concept.
 
 However, the biggest disadvantage might be performance. It's pretty slow.
 
@@ -51,3 +51,7 @@ However, the biggest disadvantage might be performance. It's pretty slow.
 
   - Lots of generators for a Prolog-like runtime (works pretty well, see the backtracking implementation in `logicpy/builtin.py`!)
   - Some little hacky tricks to provide the interface (these are somewhat more brittle)
+
+## License?
+
+This project is licensed under the MIT License.
