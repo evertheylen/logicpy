@@ -43,9 +43,9 @@ It has, obviously, perfect integration with Python. There are two main ways to i
 
 ## Why not use it?
 
-I didn't add any metaprogramming, since this would logically be Python's job. There is no 'standard library'. There's still going to be a lot of bugs.
+I didn't add any metaprogramming, since this would logically be Python's job. There is no 'standard library'. There are still going to be a lot of bugs.
 
-However, the biggest argument might be performance. It's pretty slow.
+However, the biggest disadvantage might be performance. It's pretty slow.
 
 ## How does it work?
 
