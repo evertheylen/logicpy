@@ -3,7 +3,7 @@ import operator
 from functools import wraps
 
 from logicpy.structure import Structure, MultiArg, BinaryArg, MonoArg
-from logicpy.data import Compound, EvalCompound, Variable, instantiate
+from logicpy.data import Compound, EvalCompound, Variable, Term, instantiate
 from logicpy.result import ResultException, UnificationFail
 
 

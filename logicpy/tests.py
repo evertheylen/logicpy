@@ -135,6 +135,13 @@ class BalancedTrees(UniverseAndNamespace):
             _.Ld > _.Rd,
             n.add_to(_.R, _.El, _.AddedRight))
     
+    def test_equality(self):
+        a = node(empty,3,node(empty,4,node(empty,2,empty)))
+        b = node(empty,3,node(empty,4,node(empty,2,empty)))
+        c = node(node(empty,7,empty),3,node(empty,4,node(empty,2,empty)))
+        self.assertTrue(a.really_equal(b))
+        self.assertFalse(b.really_equal(c))
+    
     def test_add(self):
         inp = node(empty,3,node(empty,4,node(empty,2,empty)))
         out = node(node(empty,7,empty),3,node(empty,4,node(empty,2,empty)))
