@@ -25,7 +25,7 @@ def occurences(obj, O):
 
 
 def replace(obj, A, B):
-    if obj == A:
+    if obj is A or obj == A:
         return B
     elif hasattr(obj, 'replace'):
         return obj.replace(A, B)
@@ -113,17 +113,17 @@ class Term:
         return Evaluation(other, self)
     
     def __eq__(self, other):
-        from logicpy.builtin import unify
         if self.been_scoped:
             return type(self) == type(other) and self.really_equal(other)
         else:
+            from logicpy.builtin import unify
             return unify(self, other)
     
     def __ne__(self, other):
-        from logicpy.builtin import unify, neg
         if self.been_scoped:
             return type(self) != type(other) or (not self.really_equal(other))
         else:
+            from logicpy.builtin import unify, neg
             return neg(unify(self, other))
 
 

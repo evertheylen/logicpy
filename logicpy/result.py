@@ -108,16 +108,26 @@ class Result:
                     E.update(zip(A.children, B.children))
                 else:
                     raise UnificationFail(f"Conflict {A}, {B}")
-            elif isinstance(A, Variable) and A != B:
+            elif isinstance(A, Variable) and (not isinstance(B, Variable) or not A.really_equal(B)):
                 # substitute
                 if has_occurence(B, A):
                     raise UnificationFail(f"Occurs check {A}, {B}")
-                # While elegant, this is somewhat slow...
-                replaced_E = {(replace(X, A, B), replace(Y, A, B)) for (X,Y) in E}
-                if E == replaced_E:
-                    did_a_thing = False
-                else:
-                    E = replaced_E
+                # While not very elegant, this is substantially faster in PyPy
+                # In CPython, it's about the same
+                remove_from_E = set()
+                add_to_E = list()
+                did_a_thing = False
+                for t in E:
+                    nt = (replace(t[0], A, B), replace(t[1], A, B))
+                    if t != nt:
+                        did_a_thing = True
+                        remove_from_E.add(t)
+                        add_to_E.append(nt)
+                
+                if did_a_thing:
+                    E -= remove_from_E
+                    E.update(add_to_E)
+                    
                 E.add((A, B))  # Add it back
             elif (not isinstance(A, (Structure, Term))) and (not isinstance(B, (Structure, Term))):
                 if A != B:

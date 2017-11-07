@@ -22,7 +22,7 @@ n.fib[_.N, _.Res] = and_(
 fib = lambda x: {0: 1, 1: 2, 2: 3}.get(x) or fib(x-1) + fib(x-2)
 
 try:
-    for arg in range(15):
+    for arg in range(10):
         check = fib(arg)
         
         try:
