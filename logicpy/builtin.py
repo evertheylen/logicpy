@@ -6,6 +6,8 @@ from logicpy.structure import Structure, MultiArg, BinaryArg, MonoArg
 from logicpy.data import Compound, EvalCompound, Variable, Term, instantiate
 from logicpy.result import ResultException, UnificationFail
 
+shell_builtins = ('True_', 'Fail', 'and_', 'or_', 'max_', 'min_', 'abs_', 'cut', 'neg', 'write')
+
 
 class TrueCls(Structure):
     def prove(self, result, dbg):
@@ -190,7 +192,37 @@ def max_(x, y):
 def min_(x, y):
     return min(x, y)
 
+
 @evaluated
 def abs_(x):
     return abs(x)
 
+
+def runnable(func, skip_result_check=True):
+    """Turns a function into a predicate that is ran with evaluated arguments.
+    Does not check the result, always succeeds.
+    """
+    
+    class Runnable(MultiArg):
+        def prove(self, result, dbg):
+            dbg.prove(self, result)
+            args = "<not instantiated yet>"
+            try:
+                args = tuple(evaluate(instantiate(a, result)) for a in self.args)
+                func_res = func(*args)
+                if skip_result_check or func_res:
+                    yield result
+            except Exception as e:
+                dbg.output(f"Calling {func.__name__} with args {args} failed: {e}")
+    
+    return Runnable
+
+
+def provable(func):
+    """Turns a function into a predicate that is ran with evaluated arguments,
+    and will fail or succeed based on the thruthiness of the return value.
+    """
+    return runnable(func, skip_result_check=False)
+
+
+write = runnable(print)

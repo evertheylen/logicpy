@@ -48,7 +48,9 @@ def instantiate(expr, result):
 def binary_compounder(name, func):
     def operation(self, other):
         return InfixEvalCompound(name, func, (self, other))
-    return operation
+    def rev_operation(self, other):
+        return InfixEvalCompound(name, func, (other, self))
+    return operation, rev_operation
 
 
 def unary_compounder(name, func):
@@ -69,14 +71,14 @@ class Term:
     
     # Basic operand support ...............................
     
-    __add__ = __radd__ =            binary_compounder('+', operator.add)
-    __sub__ = __rsub__ =            binary_compounder('-', operator.sub)
-    __mul__ = __rmul__ =            binary_compounder('*', operator.mul)
-    __div__ = __rdiv__ =            binary_compounder('/', operator.truediv)
-    __floordiv__ = __rfloordiv__ =  binary_compounder('//', operator.floordiv)
-    __mod__ = __rmod__ =            binary_compounder('%', operator.mod)
-    __matmul__ = __rmatmul__ =      binary_compounder('@', operator.matmul)
-    __pow__ = __rpow__ =            binary_compounder('**', operator.pow)
+    __add__, __radd__ =            binary_compounder('+', operator.add)
+    __sub__, __rsub__ =            binary_compounder('-', operator.sub)
+    __mul__, __rmul__ =            binary_compounder('*', operator.mul)
+    __div__, __rdiv__ =            binary_compounder('/', operator.truediv)
+    __floordiv__, __rfloordiv__ =  binary_compounder('//', operator.floordiv)
+    __mod__, __rmod__ =            binary_compounder('%', operator.mod)
+    __matmul__, __rmatmul__ =      binary_compounder('@', operator.matmul)
+    __pow__, __rpow__ =            binary_compounder('**', operator.pow)
     
     __pos__ = unary_compounder('+', operator.pos)
     __neg__ = unary_compounder('-', operator.neg)

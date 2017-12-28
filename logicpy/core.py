@@ -1,7 +1,7 @@
 
 from logicpy.predicate import Predicate, NoArgument
 from logicpy.data import Variable, Atom, NamedTerm
-from logicpy.builtin import Fail, unify
+from logicpy.builtin import Fail, unify, shell_builtins
 from logicpy.result import Result
 from logicpy.structure import Structure
 from logicpy.debug import Debugger, NoDebugger
@@ -49,9 +49,14 @@ class Universe:
         namespace = self.namespace()
         underscore = Underscore()
         
+        import logicpy.builtin
+        builtins = {k: getattr(logicpy.builtin, k) for k in shell_builtins}
+        
         class InteractiveLocals:
             def __getitem__(glob, name):
-                if name in namespace:
+                if name in builtins:
+                    return builtins[name]
+                elif name in namespace:
                     return getattr(namespace, name)
                 else:
                     return getattr(underscore, name)
@@ -62,6 +67,7 @@ class Universe:
             try:
                 inp = input("? ")
                 struc = eval(inp, {}, shell_locals)
+                #print(f">>> got {struc!r}")
                 if hasattr(struc, 'prove'):
                     for res in self.query(struc):
                         print(res, end='', flush=True)

@@ -23,4 +23,4 @@ from .builtin import *
 
 _ = Underscore()
 
-__all__ = ('_', 'Universe', 'True_', 'Fail', 'and_', 'or_', 'max_', 'min_', 'abs_', 'cut', 'neg', 'evaluated')
+__all__ = ('_', 'Universe', 'evaluated', 'runnable', 'provable') + shell_builtins

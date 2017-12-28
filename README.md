@@ -34,12 +34,44 @@ More examples can be found in the tests (`logicpy/tests.py`). There you will fin
   - **Cuts**: Just use `cut`
   - **Comparisons**: As you would expect.
 
+
 ## Why use it?
 
-It has, obviously, perfect integration with Python. There are two main ways to integrate your functionality: 
+It has, obviously, perfect integration with Python. There are three main ways to integrate your functionality, which are best described using their return value.
 
-  - As an 'evaluated' function: just use the `@evaluated` decorator (see the implementation of `max_` in `logicpy/builtin.py` for an example). Your code will be executed when we reach a `_.X << max_(...)`.
-  - As a provable structure: subclass from `MonoArg` or `MultiArg` (or `Structure` if you really want), and implement the `prove(result, debugger)` method. Yield all results that you find ok.
+### My function doesn't return anything useful, it only performs some work.
+
+Use the `@runnable` decorator. Arguments given to your function will be evaluated. Used as a predicate, it will *always* succeed. Example:
+
+    @runnable
+    def add_article(title, text):
+        requests.post(".../article/add", {'title': title, 'text': text})
+    
+    # Can be used as:
+    n.generate_intro[_.Name] = add_article("Intro " + _.Name, "Hello, I am " + _.Name + ", happy to be here.")
+
+
+### My function returns a Boolean
+
+Use the `@provable` decorator. This works almost exactly like `@runnable`, but depending on the truthiness of the return value it will succeed or fail.
+
+
+### My function returns some valuable result
+
+Use the `@evaluated` decorator. Again, the arguments itself are evaluated. Example:
+
+    @evaluated
+    def max_(x, y):
+        return max(x, y)
+    
+    # Can be used as:
+    Y << max_(X+5, 8)
+
+    
+### Want more control? (Debugging, multiple results, ...)
+  
+Apart from those techniques, you can also subclass from `MonoArg` or `MultiArg` (or `Structure` if you really want), and implement the `prove(result, debugger)` method. Yield all results that you find ok. This gives you the most control, but requires more knowledge about the inner workings of this library.
+
 
 ## Why not use it?
 
@@ -47,11 +79,13 @@ I didn't add any metaprogramming, since this would logically be Python's job. Th
 
 However, the biggest disadvantage might be performance. It's pretty slow.
 
+
 ## How does it work?
 
   - Lots of generators for a Prolog-like runtime (works pretty well, see the backtracking implementation in `logicpy/builtin.py`!)
   - Some little hacky tricks to provide the interface (these are somewhat more brittle)
 
+  
 ## License?
 
 This project is licensed under the MIT License.
